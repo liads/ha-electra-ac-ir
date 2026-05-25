@@ -1,0 +1,12 @@
+{
+  "domain": "electra_ac_ir",
+  "name": "Electra AC IR",
+  "codeowners": ["@liads"],
+  "config_flow": true,
+  "dependencies": ["infrared"],
+  "documentation": "https://github.com/liads/ha-electra-ac-ir",
+  "integration_type": "device",
+  "iot_class": "assumed_state",
+  "issue_tracker": "https://github.com/liads/ha-electra-ac-ir/issues",
+  "version": "0.1.0"
+}

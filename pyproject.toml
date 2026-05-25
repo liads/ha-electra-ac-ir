@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=69.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ha-electra-ac-ir"
+version = "0.1.0"
+description = "Home Assistant custom integration for Electra RC-3 AC units through infrared emitters"
+readme = "README.md"
+requires-python = ">=3.13"
+license = { text = "MIT" }
+dependencies = [
+  "homeassistant>=2026.4.0",
+]
+
+[project.optional-dependencies]
+test = [
+  "pytest>=8.0",
+  "pytest-homeassistant-custom-component>=0.13.0",
+  "homeassistant==2026.5.3",
+  "infrared-protocols==2.0.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
