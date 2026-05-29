@@ -95,9 +95,22 @@ class ConfigFlow:
     def _abort_if_unique_id_configured(self) -> None:
         """No-op duplicate check."""
 
+    def _abort_if_unique_id_mismatch(self) -> None:
+        """Record that the reconfigure unique ID was checked."""
+        self.unique_id_mismatch_checked = True
+
     def _get_reconfigure_entry(self):
         """Return a configured reconfigure entry."""
         return self.reconfigure_entry
+
+    def add_suggested_values_to_schema(self, data_schema, suggested_values):
+        """Add suggested values to matching form markers."""
+        for marker in data_schema.schema:
+            if marker.schema in suggested_values:
+                marker.description = {
+                    "suggested_value": suggested_values[marker.schema]
+                }
+        return data_schema
 
     def async_abort(self, *, reason: str) -> dict[str, Any]:
         """Return an abort result."""
@@ -162,6 +175,7 @@ class _VolMarker:
     def __init__(self, schema: str, default: Any = None) -> None:
         self.schema = schema
         self.default = default
+        self.description = None
 
     def __hash__(self) -> int:
         return hash((self.schema, self.default, type(self).__name__))

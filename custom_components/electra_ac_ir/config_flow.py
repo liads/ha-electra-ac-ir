@@ -10,7 +10,6 @@ from homeassistant.components import infrared
 from homeassistant.components.sensor import SensorDeviceClass
 from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult
 from homeassistant.const import CONF_NAME
-from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.selector import (
     EntitySelector,
     EntitySelectorConfig,
@@ -73,35 +72,42 @@ class ElectraAcIrConfigFlow(ConfigFlow, domain=DOMAIN):
             if not name:
                 errors[CONF_NAME] = "name_required"
             else:
-                unique_id = _unique_id_for_emitter(self.hass, emitter_entity_id)
-
                 if reconfigure_entry is None:
+                    unique_id = f"electra_rc3_{uuid4().hex}"
                     await self.async_set_unique_id(unique_id)
                     self._abort_if_unique_id_configured()
-                    data[CONF_ENTITY_UNIQUE_ID] = f"electra_rc3_{uuid4().hex}"
-                    return self.async_create_entry(title=name, data=data)
-
-                if _is_unique_id_configured_elsewhere(
-                    self.hass, reconfigure_entry, unique_id
-                ):
-                    errors[CONF_INFRARED_ENTITY_ID] = "already_configured"
+                    if _is_emitter_configured_elsewhere(
+                        self.hass, emitter_entity_id
+                    ):
+                        errors[CONF_INFRARED_ENTITY_ID] = "already_configured"
+                    else:
+                        data[CONF_ENTITY_UNIQUE_ID] = unique_id
+                        return self.async_create_entry(title=name, data=data)
                 else:
-                    data[CONF_ENTITY_UNIQUE_ID] = _entity_unique_id(
-                        reconfigure_entry
-                    )
-                    return self.async_update_reload_and_abort(
-                        reconfigure_entry,
-                        unique_id=unique_id,
-                        title=name,
-                        data=data,
-                    )
+                    await self.async_set_unique_id(reconfigure_entry.unique_id)
+                    self._abort_if_unique_id_mismatch()
+                    if _is_emitter_configured_elsewhere(
+                        self.hass, emitter_entity_id, reconfigure_entry
+                    ):
+                        errors[CONF_INFRARED_ENTITY_ID] = "already_configured"
+                    else:
+                        data[CONF_ENTITY_UNIQUE_ID] = _entity_unique_id(
+                            reconfigure_entry
+                        )
+                        return self.async_update_reload_and_abort(
+                            reconfigure_entry,
+                            title=name,
+                            data=data,
+                        )
+
+        defaults = dict(reconfigure_entry.data) if reconfigure_entry is not None else {}
+        data_schema = _data_schema(emitter_entity_ids, defaults)
+        if reconfigure_entry is not None:
+            data_schema = self.add_suggested_values_to_schema(data_schema, defaults)
 
         return self.async_show_form(
             step_id="reconfigure" if reconfigure_entry is not None else "user",
-            data_schema=_data_schema(
-                emitter_entity_ids,
-                dict(reconfigure_entry.data) if reconfigure_entry is not None else {},
-            ),
+            data_schema=data_schema,
             errors=errors,
         )
 
@@ -154,9 +160,7 @@ def _required(key: str, defaults: dict[str, Any]) -> vol.Required:
 
 
 def _optional(key: str, defaults: dict[str, Any]) -> vol.Optional:
-    """Return an optional field marker with a default when configured."""
-    if key in defaults:
-        return vol.Optional(key, default=defaults.get(key))
+    """Return an optional field marker."""
     return vol.Optional(key)
 
 
@@ -181,23 +185,20 @@ def _entity_unique_id(entry: ConfigEntry) -> str:
     return entry.data.get(CONF_ENTITY_UNIQUE_ID) or entry.unique_id or entry.entry_id
 
 
-def _is_unique_id_configured_elsewhere(
+def _is_emitter_configured_elsewhere(
     hass,
-    entry: ConfigEntry,
-    unique_id: str,
+    emitter_entity_id: str,
+    entry: ConfigEntry | None = None,
 ) -> bool:
-    """Return whether a config entry unique ID is already used by another entry."""
-    configured_entry = hass.config_entries.async_entry_for_domain_unique_id(
-        DOMAIN, unique_id
-    )
-    return configured_entry is not None and configured_entry.entry_id != entry.entry_id
+    """Return whether an infrared emitter is already used by another entry."""
+    if not hasattr(hass, "config_entries") or not hasattr(
+        hass.config_entries, "async_entries"
+    ):
+        return False
 
-
-def _unique_id_for_emitter(hass, emitter_entity_id: str) -> str:
-    """Return a stable unique ID for an emitter-backed Electra climate entity."""
-    ent_reg = er.async_get(hass)
-    entry = ent_reg.async_get(emitter_entity_id)
-    if entry is not None and entry.unique_id is not None:
-        return f"electra_rc3_{entry.platform}_{entry.unique_id}"
-
-    return f"electra_rc3_{emitter_entity_id}"
+    for configured_entry in hass.config_entries.async_entries(DOMAIN):
+        if entry is not None and configured_entry.entry_id == entry.entry_id:
+            continue
+        if configured_entry.data.get(CONF_INFRARED_ENTITY_ID) == emitter_entity_id:
+            return True
+    return False
