@@ -95,6 +95,10 @@ class ConfigFlow:
     def _abort_if_unique_id_configured(self) -> None:
         """No-op duplicate check."""
 
+    def _get_reconfigure_entry(self):
+        """Return a configured reconfigure entry."""
+        return self.reconfigure_entry
+
     def async_abort(self, *, reason: str) -> dict[str, Any]:
         """Return an abort result."""
         return {"type": "abort", "reason": reason}
@@ -106,6 +110,15 @@ class ConfigFlow:
     def async_create_entry(self, **kwargs: Any) -> dict[str, Any]:
         """Return a create entry result."""
         return {"type": "create_entry", **kwargs}
+
+    def async_update_reload_and_abort(self, entry, **kwargs: Any) -> dict[str, Any]:
+        """Update an entry, schedule reload, and return an abort result."""
+        for attr in ("unique_id", "title", "data", "options"):
+            if attr in kwargs:
+                setattr(entry, attr, kwargs[attr])
+        if hasattr(self.hass.config_entries, "async_schedule_reload"):
+            self.hass.config_entries.async_schedule_reload(entry.entry_id)
+        return self.async_abort(reason=kwargs.get("reason", "reconfigure_successful"))
 
 
 class ConfigEntry:
@@ -311,7 +324,7 @@ def install_homeassistant_stubs(monkeypatch) -> None:
 
     voluptuous = types.ModuleType("voluptuous")
     voluptuous.Required = lambda schema, default=None: _Required(schema, default)
-    voluptuous.Optional = lambda schema: _Optional(schema)
+    voluptuous.Optional = lambda schema, default=None: _Optional(schema, default)
     voluptuous.Schema = Schema
 
     infrared_protocols = types.ModuleType("infrared_protocols")

@@ -2,12 +2,31 @@
   "config": {
     "abort": {
       "already_configured": "This Electra AC has already been configured with this transmitter.",
-      "no_emitters": "No infrared transmitter entities found. Set up an infrared device first."
+      "no_emitters": "No infrared transmitter entities found. Set up an infrared device first.",
+      "reconfigure_successful": "Electra AC IR was reconfigured."
     },
     "error": {
+      "already_configured": "This transmitter is already used by another Electra AC.",
       "name_required": "Enter a name."
     },
     "step": {
+      "reconfigure": {
+        "data": {
+          "humidity_sensor": "Humidity sensor",
+          "infrared_entity_id": "Infrared transmitter",
+          "name": "Name",
+          "power_sensor": "Power sensor",
+          "temperature_sensor": "Temperature sensor"
+        },
+        "data_description": {
+          "humidity_sensor": "Optional humidity sensor to show current humidity.",
+          "infrared_entity_id": "The infrared transmitter entity used to send commands.",
+          "power_sensor": "Optional binary sensor that reflects whether the AC is currently powered.",
+          "temperature_sensor": "Optional temperature sensor to show current room temperature."
+        },
+        "description": "Update the infrared transmitter and optional sensors for your Electra AC.",
+        "title": "Reconfigure Electra AC IR"
+      },
       "user": {
         "data": {
           "humidity_sensor": "Humidity sensor",

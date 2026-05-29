@@ -30,11 +30,34 @@ def _flow(config_flow, unique_id: str | None = None):
     return flow
 
 
+def _schema_marker(schema, field_name: str):
+    for marker in schema.schema:
+        if marker.schema == field_name:
+            return marker
+    raise AssertionError(f"{field_name} was not found in schema")
+
+
 def _schema_value(schema, field_name: str):
     for marker, value in schema.schema.items():
         if marker.schema == field_name:
             return value
     raise AssertionError(f"{field_name} was not found in schema")
+
+
+def _configure_entry_manager(flow, duplicate_entry=None):
+    scheduled_reloads = []
+
+    def async_entry_for_domain_unique_id(domain, unique_id):
+        return duplicate_entry
+
+    def async_schedule_reload(entry_id):
+        scheduled_reloads.append(entry_id)
+
+    flow.hass.config_entries = SimpleNamespace(
+        async_entry_for_domain_unique_id=async_entry_for_domain_unique_id,
+        async_schedule_reload=async_schedule_reload,
+    )
+    return scheduled_reloads
 
 
 def test_step_user_aborts_without_emitters(config_flow, monkeypatch) -> None:
@@ -99,7 +122,10 @@ def test_step_user_creates_entry_with_emitter_unique_id(
     assert flow.unique_id == "electra_rc3_remote_abc123"
     assert result["type"] == "create_entry"
     assert result["title"] == "Bedroom AC"
-    assert result["data"] == {
+    data = dict(result["data"])
+    entity_unique_id = data.pop(config_flow.CONF_ENTITY_UNIQUE_ID)
+    assert entity_unique_id.startswith("electra_rc3_")
+    assert data == {
         config_flow.CONF_NAME: "Bedroom AC",
         config_flow.CONF_INFRARED_ENTITY_ID: "infrared.remote",
         config_flow.CONF_TEMPERATURE_SENSOR: "sensor.bedroom_temperature",
@@ -125,3 +151,124 @@ def test_step_user_rejects_empty_name(config_flow, monkeypatch) -> None:
 
     assert result["type"] == "form"
     assert result["errors"] == {config_flow.CONF_NAME: "name_required"}
+
+
+def test_step_reconfigure_prefills_current_config(
+    config_flow, monkeypatch
+) -> None:
+    """The reconfigure form defaults to the current entry data."""
+    monkeypatch.setattr(
+        config_flow.infrared,
+        "async_get_emitters",
+        lambda hass: ["infrared.remote", "infrared.bedroom"],
+    )
+
+    flow = _flow(config_flow)
+    flow.reconfigure_entry = SimpleNamespace(
+        entry_id="entry-id",
+        unique_id="electra_rc3_remote_old",
+        title="Bedroom AC",
+        data={
+            config_flow.CONF_NAME: "Bedroom AC",
+            config_flow.CONF_INFRARED_ENTITY_ID: "infrared.remote",
+            config_flow.CONF_TEMPERATURE_SENSOR: "sensor.bedroom_temperature",
+        },
+    )
+
+    result = asyncio.run(flow.async_step_reconfigure())
+    schema = result["data_schema"]
+
+    assert result["type"] == "form"
+    assert result["step_id"] == "reconfigure"
+    assert _schema_marker(schema, config_flow.CONF_NAME).default == "Bedroom AC"
+    assert (
+        _schema_marker(schema, config_flow.CONF_INFRARED_ENTITY_ID).default
+        == "infrared.remote"
+    )
+    assert (
+        _schema_marker(schema, config_flow.CONF_TEMPERATURE_SENSOR).default
+        == "sensor.bedroom_temperature"
+    )
+
+
+def test_step_reconfigure_updates_entry_and_reloads(
+    config_flow, monkeypatch
+) -> None:
+    """Reconfigure updates the existing entry and schedules a reload."""
+    monkeypatch.setattr(
+        config_flow.infrared,
+        "async_get_emitters",
+        lambda hass: ["infrared.remote", "infrared.bedroom"],
+    )
+
+    flow = _flow(config_flow, unique_id="new123")
+    scheduled_reloads = _configure_entry_manager(flow)
+    flow.reconfigure_entry = SimpleNamespace(
+        entry_id="entry-id",
+        unique_id="electra_rc3_remote_old",
+        title="Old AC",
+        data={
+            config_flow.CONF_NAME: "Old AC",
+            config_flow.CONF_INFRARED_ENTITY_ID: "infrared.remote",
+            config_flow.CONF_TEMPERATURE_SENSOR: "sensor.old_temperature",
+        },
+    )
+
+    result = asyncio.run(
+        flow.async_step_reconfigure(
+            {
+                config_flow.CONF_NAME: " Bedroom AC ",
+                config_flow.CONF_INFRARED_ENTITY_ID: "infrared.bedroom",
+                config_flow.CONF_HUMIDITY_SENSOR: "sensor.bedroom_humidity",
+            }
+        )
+    )
+
+    assert result == {"type": "abort", "reason": "reconfigure_successful"}
+    assert flow.reconfigure_entry.unique_id == "electra_rc3_remote_new123"
+    assert flow.reconfigure_entry.title == "Bedroom AC"
+    assert flow.reconfigure_entry.data == {
+        config_flow.CONF_NAME: "Bedroom AC",
+        config_flow.CONF_INFRARED_ENTITY_ID: "infrared.bedroom",
+        config_flow.CONF_HUMIDITY_SENSOR: "sensor.bedroom_humidity",
+        config_flow.CONF_ENTITY_UNIQUE_ID: "electra_rc3_remote_old",
+    }
+    assert scheduled_reloads == ["entry-id"]
+
+
+def test_step_reconfigure_rejects_duplicate_transmitter(
+    config_flow, monkeypatch
+) -> None:
+    """Reconfigure does not allow selecting another entry's transmitter."""
+    monkeypatch.setattr(
+        config_flow.infrared,
+        "async_get_emitters",
+        lambda hass: ["infrared.remote", "infrared.bedroom"],
+    )
+
+    duplicate_entry = SimpleNamespace(entry_id="other-entry")
+    flow = _flow(config_flow, unique_id="new123")
+    _configure_entry_manager(flow, duplicate_entry=duplicate_entry)
+    flow.reconfigure_entry = SimpleNamespace(
+        entry_id="entry-id",
+        unique_id="electra_rc3_remote_old",
+        title="Old AC",
+        data={
+            config_flow.CONF_NAME: "Old AC",
+            config_flow.CONF_INFRARED_ENTITY_ID: "infrared.remote",
+        },
+    )
+
+    result = asyncio.run(
+        flow.async_step_reconfigure(
+            {
+                config_flow.CONF_NAME: "Bedroom AC",
+                config_flow.CONF_INFRARED_ENTITY_ID: "infrared.bedroom",
+            }
+        )
+    )
+
+    assert result["type"] == "form"
+    assert result["errors"] == {
+        config_flow.CONF_INFRARED_ENTITY_ID: "already_configured"
+    }

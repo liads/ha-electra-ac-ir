@@ -17,6 +17,7 @@ CONF_INFRARED_ENTITY_ID = "infrared_entity_id"
 CONF_POWER_SENSOR = "power_sensor"
 CONF_TEMPERATURE_SENSOR = "temperature_sensor"
 CONF_HUMIDITY_SENSOR = "humidity_sensor"
+CONF_ENTITY_UNIQUE_ID = "entity_unique_id"
 
 DEFAULT_NAME = "Electra AC"
 DEFAULT_TEMPERATURE = 24

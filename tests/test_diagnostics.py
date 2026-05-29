@@ -30,6 +30,7 @@ def test_diagnostics_redacts_personal_config_data(diagnostics) -> None:
             "temperature_sensor": "sensor.living_room_temperature",
             "humidity_sensor": "sensor.living_room_humidity",
             "power_sensor": "binary_sensor.living_room_power",
+            "entity_unique_id": "stable-id",
         },
     )
 
@@ -45,6 +46,7 @@ def test_diagnostics_redacts_personal_config_data(diagnostics) -> None:
                 "temperature_sensor": "**REDACTED**",
                 "humidity_sensor": "**REDACTED**",
                 "power_sensor": "**REDACTED**",
+                "entity_unique_id": "**REDACTED**",
             },
         }
     }

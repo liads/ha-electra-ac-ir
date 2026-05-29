@@ -10,6 +10,7 @@ from homeassistant.const import CONF_NAME
 from homeassistant.core import HomeAssistant
 
 from .const import (
+    CONF_ENTITY_UNIQUE_ID,
     CONF_HUMIDITY_SENSOR,
     CONF_INFRARED_ENTITY_ID,
     CONF_POWER_SENSOR,
@@ -23,6 +24,7 @@ TO_REDACT = {
     CONF_INFRARED_ENTITY_ID,
     CONF_POWER_SENSOR,
     CONF_TEMPERATURE_SENSOR,
+    CONF_ENTITY_UNIQUE_ID,
 }
 
 

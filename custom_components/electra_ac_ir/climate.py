@@ -37,6 +37,7 @@ from homeassistant.helpers.typing import StateType
 from homeassistant.util.unit_conversion import TemperatureConverter
 
 from .const import (
+    CONF_ENTITY_UNIQUE_ID,
     CONF_HUMIDITY_SENSOR,
     CONF_INFRARED_ENTITY_ID,
     CONF_POWER_SENSOR,
@@ -115,10 +116,11 @@ class ElectraRc3Climate(ClimateEntity, RestoreEntity):
         data = entry.data
         name = data[CONF_NAME]
         config_unique_id = entry.unique_id or entry.entry_id
+        entity_unique_id = data.get(CONF_ENTITY_UNIQUE_ID) or config_unique_id
 
-        self._attr_unique_id = f"{config_unique_id}_climate"
+        self._attr_unique_id = f"{entity_unique_id}_climate"
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, config_unique_id)},
+            identifiers={(DOMAIN, entity_unique_id)},
             manufacturer=MANUFACTURER,
             model=MODEL,
             name=name,

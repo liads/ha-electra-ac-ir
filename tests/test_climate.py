@@ -55,6 +55,18 @@ def test_setup_entry_adds_entity(climate) -> None:
     assert isinstance(added[0], climate.ElectraRc3Climate)
 
 
+def test_entity_unique_id_can_be_decoupled_from_config_entry_unique_id(
+    climate,
+) -> None:
+    """A reconfigured entry keeps the same climate entity and device identity."""
+    entity = _entity(climate, **{climate.CONF_ENTITY_UNIQUE_ID: "stable-entry-id"})
+
+    assert entity._attr_unique_id == "stable-entry-id_climate"
+    assert entity._attr_device_info["identifiers"] == {
+        (climate.DOMAIN, "stable-entry-id")
+    }
+
+
 def test_target_temperature_is_coerced_and_validated(climate) -> None:
     """Target temperatures are rounded and range checked."""
     assert climate._coerce_target_temperature("23.6") == 24

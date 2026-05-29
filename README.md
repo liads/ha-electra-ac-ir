@@ -29,6 +29,9 @@ Copy `custom_components/electra_ac_ir` into your Home Assistant `custom_componen
 3. Select the infrared transmitter entity.
 4. Optionally select temperature, humidity, and binary power sensors.
 
+To change the name, infrared transmitter, or optional sensors later, go to
+**Settings > Devices & services > Electra AC IR > Configure**.
+
 The entity supports HVAC modes `off`, `auto`, `cool`, `heat`, `fan_only`, and `dry`; fan modes `auto`, `low`, `medium`, and `high`; swing modes `off` and `on`; and target temperatures from 16 C to 30 C.
 
 ## Development
