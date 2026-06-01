@@ -376,7 +376,10 @@ class ElectraRc3Climate(ClimateEntity, RestoreEntity):
     @callback
     def _update_infrared_availability(self, state) -> None:
         """Update availability from the configured infrared emitter state."""
-        available = state is not None and state.state != STATE_UNAVAILABLE
+        available = state is not None and state.state not in (
+            STATE_UNAVAILABLE,
+            STATE_UNKNOWN,
+        )
         if available == self.available:
             return
 

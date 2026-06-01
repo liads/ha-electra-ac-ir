@@ -139,6 +139,32 @@ def test_power_sensor_updates_assumed_mode(climate) -> None:
     assert entity._last_sent_hvac_mode == climate.DEFAULT_HVAC_MODE
 
 
+@pytest.mark.parametrize(
+    "emitter_state",
+    [None, "unavailable", "unknown"],
+)
+def test_infrared_emitter_unavailable_states_mark_entity_unavailable(
+    climate, emitter_state
+) -> None:
+    """Missing, unavailable, and unknown emitters make the climate unavailable."""
+    entity = _entity(climate)
+    entity._attr_available = True
+
+    state = None if emitter_state is None else _state(emitter_state)
+    entity._update_infrared_availability(state)
+
+    assert entity._attr_available is False
+
+
+def test_infrared_emitter_normal_state_marks_entity_available(climate) -> None:
+    """A normal emitter state makes the climate available."""
+    entity = _entity(climate)
+
+    entity._update_infrared_availability(_state("idle"))
+
+    assert entity._attr_available is True
+
+
 def test_setters_defer_to_apply_state_or_update_offline_preferences(climate) -> None:
     """Setter methods either send state or store offline preferences."""
     entity = _entity(climate)
