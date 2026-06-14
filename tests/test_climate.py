@@ -141,12 +141,12 @@ def test_power_sensor_updates_assumed_mode(climate) -> None:
 
 @pytest.mark.parametrize(
     "emitter_state",
-    [None, "unavailable", "unknown"],
+    [None, "unavailable"],
 )
 def test_infrared_emitter_unavailable_states_mark_entity_unavailable(
     climate, emitter_state
 ) -> None:
-    """Missing, unavailable, and unknown emitters make the climate unavailable."""
+    """Missing and unavailable emitters make the climate unavailable."""
     entity = _entity(climate)
     entity._attr_available = True
 
@@ -154,6 +154,15 @@ def test_infrared_emitter_unavailable_states_mark_entity_unavailable(
     entity._update_infrared_availability(state)
 
     assert entity._attr_available is False
+
+
+def test_infrared_emitter_unknown_state_marks_entity_available(climate) -> None:
+    """An initializing emitter with unknown state remains usable."""
+    entity = _entity(climate)
+
+    entity._update_infrared_availability(_state("unknown"))
+
+    assert entity._attr_available is True
 
 
 def test_infrared_emitter_normal_state_marks_entity_available(climate) -> None:

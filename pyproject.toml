@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ha-electra-ac-ir"
-version = "0.1.0"
+version = "0.2.0"
 description = "Home Assistant custom integration for Electra RC-3 AC units through infrared emitters"
 readme = "README.md"
 requires-python = ">=3.13"
